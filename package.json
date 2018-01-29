@@ -4,7 +4,8 @@
   "description": "This module is used for crawling the website specified for getting all links",
   "main": "app.js",
   "scripts": {
-    "test": "node app.js"
+    "test": "node app.js",
+    "start":"node app.js"
   },
   "author": "ayush saxena",
   "license": "ISC",
@@ -12,10 +13,8 @@
     "async": "^2.6.0",
     "await": "^0.2.6",
     "axios": "^0.17.1",
-    "bluebird": "^3.5.1",
     "cheerio": "^1.0.0-rc.2",
     "csvdata": "^1.4.0",
-    "dom-parser": "^0.1.5",
     "ramda": "^0.25.0",
     "request": "^2.83.0"
   }

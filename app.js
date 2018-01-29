@@ -1,85 +1,107 @@
+//This script is using async library 
+
 const request = require('request');
-const domParser = require('dom-parser');
-const parser = new domParser();
-const linkRegex = /<a\s+(?:[^>]*?\s+)?href="([^"]*)"/g;
 const cheerio = require('cheerio');
-const Promise = require('bluebird');
+var events = require('events');
+var eventEmitter = new events.EventEmitter();
+var async = require('async');
+var await =require('await');
 const validUrl=/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/g;
-var links =[];
+const R= require('ramda');
+const csvdata = require('csvdata');
 var visited ={};
 
-var linksLeft=0;
+const websiteUrl = 'https://www.medium.com';//website to crawl
 
 var queue=[];
-var top=0;
-var concurrent=100;
-var running=0;
+var running=0; //number of active request
+var manualShift = false;
+var max=5;// number of ma connections
 
-const next = (func) =>{
-  if(running<=concurrent && queue.length>0){
-    queue.shift()();
-    // console.log("less");
-  }else if(running >= concurrent){
-    queue.push(func);
-  }else {
-    func();
-  }
-}
-const getLinks = (url) =>{
-  return new Promise((resolve,reject) =>{
-    if(visited[url] == 1)
-      {
-        linksLeft--;
-        if(linksLeft == 0)
-          resolve([]);
-      }
-    running++;
-    // console.log("concuurent connections ="+running);
+const getLinks =  async (url) =>{
+  // console.log(url);
+    if(manualShift)
+      queueShift();
+    if(!R.isNil(visited[url])){//For checking already visited urls
+      queueShift();
+    }
     request(url,(err,res,html) =>{
-      // console.log(url);
-      // console.log(Object.keys(visited).length+"   "+linksLeft+"     "+queue.length)
-      running--;
-      linksLeft--;
       if(!err && res.statusCode == 200){
-        // let document =parser.parseFromString(html,"text/html");
-        // console.log("res");
-        let $ = cheerio.load(html);
-        let flag=true;
-        $('#container').find('a').each(function(){
-          if($(this).attr('href')!=null && $(this).attr('href')!=undefined  && validUrl.test($(this).attr('href')))
+        if(manualShift || queue.length >10)//If want to stop hitting request after some limit just give that limit in condition
           {
-            if(!visited[$(this).attr('href')]){
-              flag=false;
-              linksLeft++;
-              visited[$(this).attr('href')]=1;
-              let link = $(this).attr('href');
-              next(function(){
-                getLinks(link).then(links =>{
-                  if(linksLeft == 0){
-                    resolve();
-                  }
-                });
-              });
-            }
+            console.log("manual shift");
+            queueShift();
+            manualShift=true;
+            return null;
+          }
+        let $ = cheerio.load(html);
+        let arr=[];
+        $('body').find('a').each(function(){
+          let href = $(this).attr('href');
+          if(href!=null && href!=undefined && R.isNil(visited[href]) && validUrl.test(href))
+          {
+            visited[href]=1;
+            queue.push(href);
+            queueShift();
           }
         });
-        if(flag){
-          if(linksLeft == 0){
-            resolve();
-          }
-        }
       }
       if(err || res.statusCode!=200){
         console.log("Error Occured for "+url);
-        resolve();
+        queueShift();
       }
     })
+}
+const queueShift = async () =>{
+  // console.log(running);
+  if(manualShift){
+    queue.shift();
+  }
+  if(running < max && queue.length>0){
+    while(running<max)
+      {
+        if(queue.length == 0)
+          break;
+        running++;
+        getLinks(queue.shift()).then(x=>{running--;}).catch(err=>{running--;});
+      }
+  }
+  else if(queue.length == 0 && running == 0){
+    eventEmitter.emit('end');
+  }
+}
+
+const eventWaiterForCrawling = (url) =>{
+  return new Promise((resolve,reject)=>{
+    getLinks(url);
+    eventEmitter.on('end', ()=>{
+      console.log("Website crawling finished");
+      resolve(visited);
+    });
   })
 }
 
-const startCrawling = url =>{
-  getLinks(url).then("Finished///////////////////////////"+console.log(Object.keys(visited).length));
-
+const crawlAndStoreToFile = async (url) =>{
+  console.log('crawling '+url);
+  await eventWaiterForCrawling(url);
+  let json = Object.keys(visited).map(url =>{
+    let x={};
+    x['Web Urls']=url;
+    return x
+  });
+  await csvdata.write('./webLinks.csv',json,{log:false,header: 'Web Urls'});
+  console.log("Data Written to webLinks.csv file");
+  return Object.keys(visited);
 }
 
-startCrawling('http://medium.com');
+
+const startCrawling = url =>{
+  crawlAndStoreToFile(url)
+  .then(urls =>{
+    console.log("Found "+urls.length+" urls from "+url );
+    console.log("Exiting:");
+    process.exit();
+  })
+}
+
+startCrawling(websiteUrl);
