@@ -1,4 +1,4 @@
-# Website Crawler Promise Based
+# Website Crawler Using Async/Await
 
 Use this project to crawl websites recursively for the links inside it.
 
@@ -8,7 +8,7 @@ Clone this repo into your local machine.
 
 ### Prerequisites
 
-Node.js version 8+
+Node.js version 6+
 
 ### Installing And Running
 
