@@ -25,15 +25,16 @@ const getLinks =  async (url) =>{
     if(!R.isNil(visited[url])){//For checking already visited urls
       queueShift();
     }
+    console.log("Trying Url "+url);
     request(url,(err,res,html) =>{
       if(!err && res.statusCode == 200){
-        if(manualShift || queue.length >10)//If want to stop hitting request after some limit just give that limit in condition
-          {
-            console.log("manual shift");
-            queueShift();
-            manualShift=true;
-            return null;
-          }
+        // if(manualShift || queue.length >10)//If want to stop hitting request after some limit just give that limit in condition
+        //   {
+        //     console.log("manual shift");
+        //     queueShift();
+        //     manualShift=true;
+        //     return null;
+        //   }
         let $ = cheerio.load(html);
         let arr=[];
         $('body').find('a').each(function(){
@@ -53,11 +54,11 @@ const getLinks =  async (url) =>{
     })
 }
 const queueShift = async () =>{
-  // console.log(running);
+  // console.log("Concurrent connections "+running);
   if(manualShift){
     queue.shift();
   }
-  if(running < max && queue.length>0){
+  if(running < max && queue.length>0){ //if running connections are less hit more till max
     while(running<max)
       {
         if(queue.length == 0)
@@ -94,6 +95,20 @@ const crawlAndStoreToFile = async (url) =>{
   return Object.keys(visited);
 }
 
+process.on('SIGINT', function() {
+  console.log("Interrupt signal Wrtting urls to file");
+  let json = Object.keys(visited).map(url =>{
+    let x={};
+    x['Web Urls']=url;
+    return x
+  });
+  csvdata.write('./webLinks.csv',json,{log:false,header: 'Web Urls'}).then(
+    () =>{
+      console.log("Urls writtent to webLinks.csv");
+      process.exit();
+    }
+  )
+});
 
 const startCrawling = url =>{
   crawlAndStoreToFile(url)

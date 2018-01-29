@@ -1,7 +1,7 @@
 # Website Crawler Using Async/Await
 
 Use this project to crawl websites recursively for the links inside it.
-
+You can also find Promise bases project [Promise Based](https://github.com/ayush2616/website-crawler-promise)
 ## Getting Started
 
 Clone this repo into your local machine.
