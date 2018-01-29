@@ -11,6 +11,8 @@ const R= require('ramda');
 const csvdata = require('csvdata');
 var visited ={};
 
+const websiteUrl = 'https://www.medium.com';//website to crawl
+
 var queue=[];
 var running=0; //number of active request
 var manualShift = false;
@@ -102,4 +104,4 @@ const startCrawling = url =>{
   })
 }
 
-startCrawling('https://www.medium.com');
+startCrawling(websiteUrl);
