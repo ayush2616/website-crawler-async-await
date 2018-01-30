@@ -28,13 +28,16 @@ const getLinks =  async (url) =>{
     console.log("Trying Url "+url);
     request(url,(err,res,html) =>{
       if(!err && res.statusCode == 200){
-        // if(manualShift || queue.length >10)//If want to stop hitting request after some limit just give that limit in condition
+        // if(manualShift || queue.length >100)//If want to stop hitting request after some limit just give that limit in condition
         //   {
         //     console.log("manual shift");
+        //     queue.length=0;
+        //     running=0;
         //     queueShift();
         //     manualShift=true;
         //     return null;
         //   }
+        //Using Breadth First Search to crawl all the links
         let $ = cheerio.load(html);
         let arr=[];
         $('body').find('a').each(function(){
@@ -55,9 +58,9 @@ const getLinks =  async (url) =>{
 }
 const queueShift = async () =>{
   // console.log("Concurrent connections "+running);
-  if(manualShift){
-    queue.shift();
-  }
+  // if(manualShift){
+  //   // queue.shift();
+  // }
   if(running < max && queue.length>0){ //if running connections are less hit more till max
     while(running<max)
       {
@@ -97,6 +100,8 @@ const crawlAndStoreToFile = async (url) =>{
 
 process.on('SIGINT', function() {
   console.log("Interrupt signal Wrtting urls to file");
+  queue.length=0;
+  running=0;
   let json = Object.keys(visited).map(url =>{
     let x={};
     x['Web Urls']=url;
